@@ -6,8 +6,9 @@ from polarizabilityyb1 import polarizability
 st.set_page_config(page_title="Yb Polarizability Calculator", layout="wide")
 
 # --- 側邊欄：全域參數設定 ---
-st.sidebar.title("全域參數設定")
+st.sidebar.title("參數與範圍設定")
 
+st.sidebar.markdown("### 1. 物理參數")
 isotope = st.sidebar.selectbox("同位素 (Isotope)", [174, 171, 173])
 I_dict = {174: 0.0, 171: 0.5, 173: 2.5}
 I_val = I_dict[isotope]
@@ -24,6 +25,14 @@ if p_val == 0:
     beta_angle = st.sidebar.number_input("入射角度 (Beta in deg)", min_value=0.0, max_value=180.0, value=0.0)
 else:
     beta_angle = 0.0
+
+# 新增波長範圍設定，並限制最小值不能小於 1 (避免除以 0 或負波長)
+st.sidebar.markdown("### 2. 圖表顯示範圍")
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    min_wl = st.number_input("最小波長 (nm)", min_value=10.0, value=300.0, step=50.0)
+with col2:
+    max_wl = st.number_input("最大波長 (nm)", min_value=50.0, value=800.0, step=50.0)
 
 # --- 主畫面：能階與 mF 選擇 ---
 st.title("Ytterbium (Yb) 互動式極化率計算機")
@@ -49,7 +58,6 @@ for i, (state_name, info) in enumerate(states_info.items()):
         
         if is_checked:
             F_val = info["J"] + I_val
-            # 恢復正負號選單：從 -F 到 F
             mF_options = np.arange(-F_val, F_val + 1, 1.0)
             selected_mF = st.selectbox(f"選擇 mF", mF_options, key=f"mf_{state_name}")
             
@@ -64,8 +72,10 @@ st.divider()
 
 # --- 繪圖邏輯 (使用 Plotly) ---
 if len(selected_configs) > 0:
-    # 增加波長解析度，讓共振峰更精細
-    wavelengths = np.linspace(300, 800, 4000) 
+    # 根據側邊欄設定的範圍動態產生波長陣列
+    # 為了應付更大的範圍，我們自動調整解析度以保持曲線平滑
+    resolution = int(max(4000, (max_wl - min_wl) * 10)) 
+    wavelengths = np.linspace(min_wl, max_wl, resolution) 
     
     c = 299792458
     h = 6.62607004e-34
@@ -88,9 +98,9 @@ if len(selected_configs) > 0:
 
         y_plot = np.array(y_plot, dtype=float)
         
-        # 【全新斷線演算法】：利用微積分概念，偵測相鄰兩點差異過大的地方 (跨越共振漸近線)
+        # 斷線演算法
         diffs = np.abs(np.diff(y_plot))
-        jump_threshold = y_limit * 2  # 當兩點之間跳躍超過視野兩倍時斷開
+        jump_threshold = y_limit * 2  
         jump_indices = np.where(diffs > jump_threshold)[0]
         
         for idx in jump_indices:
@@ -99,7 +109,6 @@ if len(selected_configs) > 0:
             
         label_str = f"{config['name']}, F={config['J']+I_val}, mF={config['mF']}"
         
-        # 加入 Plotly 曲線
         fig.add_trace(go.Scatter(
             x=wavelengths, 
             y=y_plot, 
@@ -108,13 +117,18 @@ if len(selected_configs) > 0:
             hovertemplate="波長: %{x:.2f} nm<br>極化率: %{y:.2f}<extra></extra>"
         ))
 
-    # 設定 Plotly 圖表外觀與互動功能
+    # 更新 Plotly 圖表設定
     fig.update_layout(
-        xaxis_title="Wavelength (nm)",
-        yaxis_title=ylabel_str,
-        yaxis_range=[-y_limit, y_limit], # 強制鎖定預設的 Y 軸顯示範圍，但保留 Peak 資料
-        xaxis_range=[300, 800],
-        hovermode="x unified", # 游標移上去會顯示同一垂直線上的所有數值
+        xaxis=dict(
+            title="Wavelength (nm)",
+            range=[min_wl, max_wl],       # 初始顯示範圍與計算範圍同步
+            rangemode="nonnegative"       # 【關鍵】強制 X 軸不顯示負數
+        ),
+        yaxis=dict(
+            title=ylabel_str,
+            range=[-y_limit, y_limit]
+        ),
+        hovermode="x unified", 
         legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99),
         margin=dict(l=40, r=40, t=40, b=40)
     )
