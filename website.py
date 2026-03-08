@@ -6,6 +6,19 @@ from scattering_rate import scatterrate
 
 st.set_page_config(page_title="Yb Physics Calculator", layout="wide")
 
+# --- Global Physical Constants ---
+c_const = 299792458
+h_const = 6.62607004e-34
+hbar = h_const / (2 * np.pi)
+kB = 1.380649e-23
+epsilon_0 = 8.8541878128e-12
+a0_const = 0.52917721067e-10
+au_SI = 4 * np.pi * epsilon_0 * a0_const**3
+m_Yb = 2.8733965E-25 
+
+# Conversion factor from polarizability to V_ac/I (h Hz W^-1 cm^2)
+conv_factor = (2 * np.pi * a0_const**3 / (c_const * h_const)) * 10000 
+
 # --- Sidebar: Global Settings ---
 st.sidebar.title("Global Parameters")
 
@@ -43,6 +56,7 @@ tab1, tab2 = st.tabs(["📊 Polarizability Plotter", "🧮 Trap & Scattering Cal
 with tab1:
     st.title("Ytterbium (Yb) Interactive Polarizability Plotter")
     st.markdown("Select states and mF values. The plot supports **hover values, scroll-to-zoom, and drag-to-pan**.")
+    st.info("💡 **Physics Note:** A core polarizability correction of **-0.8 V_ac/I** is automatically applied to the 1S0 state.")
 
     states_info = {
         "1S0": {"istate": 1, "J": 0},
@@ -80,22 +94,23 @@ with tab1:
         resolution = int(max(4000, (max_wl - min_wl) * 10)) 
         wavelengths = np.linspace(min_wl, max_wl, resolution) 
         
-        c = 299792458
-        h = 6.62607004e-34
-        a0 = 0.52917721067e-10
-        
         fig = go.Figure()
         
         for config in selected_configs:
             pol_val_array = polarizability(wavelengths, config["istate"], config["mF"], p_val, I_val, beta_angle)
+            
+            # --- APPLY 1S0 CORE CORRECTION ---
+            # polarizability() returns negative values for red-detuned traps.
+            # Shifting V_ac/I by -0.8 means subtracting (0.8 / conv_factor) from the array.
+            if config["istate"] == 1:
+                pol_val_array = pol_val_array - (0.8 / conv_factor)
             
             if unit_choice == "Atomic Unit (a.u.)":
                 y_plot = -pol_val_array
                 y_limit = 1000
                 ylabel_str = "Polarizability (a.u.)"
             else:
-                factor = (2 * np.pi * a0**3 / (c * h)) * 10000 
-                y_plot = pol_val_array * factor
+                y_plot = pol_val_array * conv_factor
                 y_limit = 40
                 ylabel_str = "V_ac / I (h Hz W^-1 cm^2)"
 
@@ -138,16 +153,6 @@ with tab1:
 with tab2:
     st.title("Optical Trap Depth & Scattering Rate Calculator (1S0 Ground State)")
     
-    # Physical Constants
-    c_const = 299792458
-    h_const = 6.62607004e-34
-    hbar = h_const / (2 * np.pi)
-    kB = 1.380649e-23
-    epsilon_0 = 8.8541878128e-12
-    a0_const = 0.52917721067e-10
-    au_SI = 4 * np.pi * epsilon_0 * a0_const**3
-    m_Yb = 2.8733965E-25 
-    
     # Transition wavenumbers and corresponding natural linewidths (Units: cm^-1, kHz)
     transitions_data = {
         "(6s6p)3P1 (≈ 556 nm)": {"wn": 17992.00699, "gamma_khz": 182.2},
@@ -168,12 +173,10 @@ with tab2:
             selected_trans = st.selectbox("Select Near-Resonant Transition", list(transitions_data.keys()))
             detuning_mhz = st.number_input("Detuning (MHz)", value=-10000.0, step=10.0)
             
-            # Retrieve linewidth dynamically from the dictionary
             gamma_khz = transitions_data[selected_trans]["gamma_khz"]
             
-            # Calculate effective evaluation wavelength
             wn = transitions_data[selected_trans]["wn"]
-            f_res = c_const * wn * 100 # Resonance frequency in Hz
+            f_res = c_const * wn * 100 
             f_eval = f_res + (detuning_mhz * 1e6)
             eval_wvl_nm = (c_const / f_eval) * 1e9
             
@@ -203,8 +206,11 @@ with tab2:
                 I_calc = I_0
                 st.info("ℹ️ Dipole Trap: Calculation uses focal center intensity (I = I_0)")
 
-            # 2. Calculate Trap Depth
-            alpha_au_val = abs(polarizability(eval_wvl_nm, 1, 0, p_val, I_val, beta_angle))
+            # 2. Calculate Trap Depth (Applying -0.8 V_ac/I correction to 1S0)
+            raw_pol_array = polarizability(eval_wvl_nm, 1, 0, p_val, I_val, beta_angle)
+            corrected_pol_array = raw_pol_array - (0.8 / conv_factor)
+            
+            alpha_au_val = abs(corrected_pol_array)
             alpha_SI = alpha_au_val * au_SI
             U_joule = (alpha_SI * I_calc) / (2 * epsilon_0 * c_const)
             trap_depth_uK = (U_joule / kB) * 1e6
@@ -216,11 +222,9 @@ with tab2:
                 gamma_rad = 2 * np.pi * gamma_khz * 1e3
                 delta_rad = 2 * np.pi * detuning_mhz * 1e6
                 
-                # Dynamic Saturation Intensity (Isat)
                 Isat = (np.pi * h_const * c_const * gamma_rad) / (3 * lambda_res_m**3)
                 s0 = I_calc / Isat
                 
-                # Lorentzian two-level scattering formula
                 R_sc = (gamma_rad / 2) * (s0 / (1 + s0 + 4 * (delta_rad / gamma_rad)**2))
             else:
                 st.success("✅ Applied multi-level Kramers-Heisenberg far-detuned formula")
@@ -233,7 +237,7 @@ with tab2:
             recoil_nK = (recoil_J / kB) * 1e9
             
             # --- Display Results ---
-            st.subheader("📊 Calculation Results")
+            st.subheader("📊 Calculation Results (with -0.8 V_ac/I Core Correction)")
             res_col1, res_col2, res_col3, res_col4 = st.columns(4)
             
             res_col1.metric("Trap Depth", f"{trap_depth_uK:.2f} uK")
