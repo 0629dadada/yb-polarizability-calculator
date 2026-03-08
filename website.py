@@ -237,7 +237,7 @@ with tab2:
             recoil_nK = (recoil_J / kB) * 1e9
             
             # --- Display Results ---
-            st.subheader("📊 Calculation Results (with -0.8 V_ac/I Core Correction)")
+            st.subheader("📊 Calculation Results")
             res_col1, res_col2, res_col3, res_col4 = st.columns(4)
             
             res_col1.metric("Trap Depth", f"{trap_depth_uK:.2f} uK")
