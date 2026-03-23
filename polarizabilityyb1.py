@@ -128,7 +128,7 @@ def polarizability(lambda_nm, istate, mi = 0, p = 0, I = 0, beta = 0):
     alpha_t = np.zeros_like(wlight, dtype=float)
 
 
-
+    beta_rad = beta * np.pi / 180
 
     if istate == 8:
         # not used in current tables above, but kept for completeness
@@ -164,13 +164,13 @@ def polarizability(lambda_nm, istate, mi = 0, p = 0, I = 0, beta = 0):
                 for k in range(len(Jk[istate])):
                     alpha_s += (2/3/hbar) * (w[istate][k]/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2 / (2*Ji[istate]+1)
                     alpha_v += (-1)**(2*Ji[istate]+Jk[istate][k]+Fi[istate]+I) * (6*Fi[istate]*(2*Fi[istate]+1)/(Fi[istate]+1))**0.5 * float(wigner_6j(1,1,1,Ji[istate],Ji[istate],Jk[istate][k])) * float(wigner_6j(Ji[istate],Ji[istate],1,Fi[istate],Fi[istate],I)) * mi/Fi[istate] * (wlight/hbar/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2 
-                alpha = alpha_s + alpha_v
+                alpha = alpha_s + alpha_v * math.cos(beta_rad)
                 return -alpha/au
             elif p == -1:
                 for k in range(len(Jk[istate])):
                     alpha_s += (2/3/hbar) * (w[istate][k]/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2 / (2*Ji[istate]+1)
                     alpha_v += (-1)**(2*Ji[istate]+Jk[istate][k]+Fi[istate]+I) * (6*Fi[istate]*(2*Fi[istate]+1)/(Fi[istate]+1))**0.5 * float(wigner_6j(1,1,1,Ji[istate],Ji[istate],Jk[istate][k])) * float(wigner_6j(Ji[istate],Ji[istate],1,Fi[istate],Fi[istate],I)) * mi/Fi[istate] * (wlight/hbar/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2
-                alpha = alpha_s - alpha_v
+                alpha = alpha_s - alpha_v * math.cos(beta_rad)
                 return -alpha/au
             else:
                 raise ValueError("Invalid polarization")
@@ -179,21 +179,21 @@ def polarizability(lambda_nm, istate, mi = 0, p = 0, I = 0, beta = 0):
                 for k in range(len(Jk[istate])):
                     alpha_s += (2/3/hbar) * (w[istate][k]/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2 / (2*Ji[istate]+1)
                     alpha_t += (-1)**(2*Ji[istate]+Jk[istate][k]+Fi[istate]+I) * (40*Fi[istate]*(2*Fi[istate]+1)*(2*Fi[istate]-1)/3/(Fi[istate]+1)/(2*Fi[istate]+3))**0.5 * float(wigner_6j(1,1,2,Ji[istate],Ji[istate],Jk[istate][k])) * float(wigner_6j(Ji[istate],Ji[istate],2,Fi[istate],Fi[istate],I)) * (w[istate][k]/hbar/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2 * (3*mi**2-Fi[istate]*(Fi[istate]+1))/Fi[istate]/(2*Fi[istate]-1)
-                alpha = alpha_s + (3*math.cos(beta*np.pi/180)**2-1)*alpha_t/2
+                alpha = alpha_s + (3*math.cos(beta_rad)**2-1)*alpha_t/2
                 return -alpha/au
             elif p == 1:
                 for k in range(len(Jk[istate])):
                     alpha_s += (2/3/hbar) * (w[istate][k]/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2 / (2*Ji[istate]+1)
                     alpha_v += (-1)**(2*Ji[istate]+Jk[istate][k]+Fi[istate]+I) * (6*Fi[istate]*(2*Fi[istate]+1)/(Fi[istate]+1))**0.5 * float(wigner_6j(1,1,1,Ji[istate],Ji[istate],Jk[istate][k])) * float(wigner_6j(Ji[istate],Ji[istate],1,Fi[istate],Fi[istate],I)) * mi/Fi[istate] * (wlight/hbar/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2 
                     alpha_t += (-1)**(2*Ji[istate]+Jk[istate][k]+Fi[istate]+I) * (40*Fi[istate]*(2*Fi[istate]+1)*(2*Fi[istate]-1)/3/(Fi[istate]+1)/(2*Fi[istate]+3))**0.5 * float(wigner_6j(1,1,2,Ji[istate],Ji[istate],Jk[istate][k])) * float(wigner_6j(Ji[istate],Ji[istate],2,Fi[istate],Fi[istate],I)) * (w[istate][k]/hbar/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2 * (3*mi**2-Fi[istate]*(Fi[istate]+1))/Fi[istate]/(2*Fi[istate]-1)
-                alpha = alpha_s + alpha_v - 0.5 * alpha_t
+                alpha = alpha_s + alpha_v * math.cos(beta_rad) + (3*(math.sin(beta_rad)**2)/2 - 1)/2 * alpha_t
                 return -alpha/au
             elif p == -1:
                 for k in range(len(Jk[istate])):
                     alpha_s += (2/3/hbar) * (w[istate][k]/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2 / (2*Ji[istate]+1)
                     alpha_v += (-1)**(2*Ji[istate]+Jk[istate][k]+Fi[istate]+I) * (6*Fi[istate]*(2*Fi[istate]+1)/(Fi[istate]+1))**0.5 * float(wigner_6j(1,1,1,Ji[istate],Ji[istate],Jk[istate][k])) * float(wigner_6j(Ji[istate],Ji[istate],1,Fi[istate],Fi[istate],I)) * mi/Fi[istate] * (wlight/hbar/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2
                     alpha_t += (-1)**(2*Ji[istate]+Jk[istate][k]+Fi[istate]+I) * (40*Fi[istate]*(2*Fi[istate]+1)*(2*Fi[istate]-1)/3/(Fi[istate]+1)/(2*Fi[istate]+3))**0.5 * float(wigner_6j(1,1,2,Ji[istate],Ji[istate],Jk[istate][k])) * float(wigner_6j(Ji[istate],Ji[istate],2,Fi[istate],Fi[istate],I)) * (w[istate][k]/hbar/(w[istate][k]**2 - wlight**2)) * RME_SI[istate][k]**2 * (3*mi**2-Fi[istate]*(Fi[istate]+1))/Fi[istate]/(2*Fi[istate]-1)
-                alpha = alpha_s - alpha_v - 0.5 * alpha_t
+                alpha = alpha_s - alpha_v * math.cos(beta_rad) + (3*(math.sin(beta_rad)**2)/2 - 1)/2 * alpha_t
                 return -alpha/au
             else:
                 raise ValueError("Invalid polarization")

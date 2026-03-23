@@ -32,10 +32,19 @@ pol_str = st.sidebar.selectbox("Polarization",
 pol_dict = {"pi (Linear)": 0, "sigma+ (Circular)": 1, "sigma- (Circular)": -1}
 p_val = pol_dict[pol_str]
 
+# --- 動態設定 Beta 角度的物理說明文字 ---
 if p_val == 0:
-    beta_angle = st.sidebar.number_input("Incident Angle (Beta in deg)", min_value=0.0, max_value=180.0, value=0.0)
+    beta_help_text = "For Linear (pi) polarization: Angle between the **POLARIZATION vector (e)** and the quantization axis (z-axis)."
 else:
-    beta_angle = 0.0
+    beta_help_text = "For Circular (sigma) polarization: Angle between the **PROPAGATION vector (k)** and the quantization axis (z-axis)."
+
+beta_angle = st.sidebar.number_input(
+    "Incident Angle (Beta in deg)", 
+    min_value=0.0, 
+    max_value=180.0, 
+    value=0.0,
+    help=beta_help_text  # 游標移到問號上就會顯示這段文字
+)
 
 st.sidebar.markdown("### 2. Plot Display Range (Plotter Only)")
 col1, col2 = st.sidebar.columns(2)
