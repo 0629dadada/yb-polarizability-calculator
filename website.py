@@ -6,6 +6,14 @@ from scattering_rate import scatterrate
 
 st.set_page_config(page_title="Yb Physics Calculator", layout="wide")
 
+# --- Helper Function: Convert Float to Fraction String ---
+def to_fraction(val):
+    """Converts 0.5 -> 1/2, 1.5 -> 3/2, etc. Keeps integers as strings."""
+    if val == 0: return "0"
+    if abs(val % 1) == 0.5:
+        return f"{int(2*val)}/2"
+    return str(int(val))
+
 # --- Global Physical Constants ---
 c_const = 299792458
 h_const = 6.62607004e-34
@@ -23,7 +31,12 @@ conv_factor = (2 * np.pi * a0_const**3 / (c_const * h_const)) * 10000
 st.sidebar.title("Global Parameters")
 
 st.sidebar.markdown("### 1. Shared Physics Parameters")
-isotope = st.sidebar.selectbox("Isotope", [174, 171, 173])
+# Display I as fractions in the selector
+isotope = st.sidebar.selectbox(
+    "Isotope", 
+    [174, 171, 173],
+    format_func=lambda x: f"{x} (I={to_fraction({174:0.0, 171:0.5, 173:2.5}[x])})"
+)
 I_dict = {174: 0.0, 171: 0.5, 173: 2.5}
 I_val = I_dict[isotope]
 
@@ -32,7 +45,7 @@ pol_str = st.sidebar.selectbox("Polarization",
 pol_dict = {"pi (Linear)": 0, "sigma+ (Circular)": 1, "sigma- (Circular)": -1}
 p_val = pol_dict[pol_str]
 
-# --- 動態設定 Beta 角度的物理說明文字 ---
+# Dynamic help text for Beta Angle
 if p_val == 0:
     beta_help_text = "For Linear (pi) polarization: Angle between the **POLARIZATION vector (e)** and the quantization axis (z-axis)."
 else:
@@ -43,7 +56,7 @@ beta_angle = st.sidebar.number_input(
     min_value=0.0, 
     max_value=180.0, 
     value=0.0,
-    help=beta_help_text  # 游標移到問號上就會顯示這段文字
+    help=beta_help_text
 )
 
 st.sidebar.markdown("### 2. Plot Display Range (Plotter Only)")
@@ -64,7 +77,7 @@ tab1, tab2 = st.tabs(["📊 Polarizability Plotter", "🧮 Trap & Scattering Cal
 # ==========================================
 with tab1:
     st.title("Ytterbium (Yb) Interactive Polarizability Plotter")
-    st.markdown("Select states and mF values. The plot supports **hover values, scroll-to-zoom, and drag-to-pan**.")
+    st.markdown("Select states and $m_F$ values. The plot supports **hover values, scroll-to-zoom, and drag-to-pan**.")
     st.info("💡 **Physics Note:** A core polarizability correction of **-0.8 V_ac/I** is automatically applied to the 1S0 state.")
 
     states_info = {
@@ -82,13 +95,18 @@ with tab1:
     cols = st.columns(4)
     for i, (state_name, info) in enumerate(states_info.items()):
         with cols[i % 4]:
-            st.markdown(f"**{state_name}**")
+            F_val = info["J"] + I_val
+            st.markdown(f"**{state_name} (F={to_fraction(F_val)})**")
             is_checked = st.checkbox(f"Show {state_name}", key=f"chk_{state_name}")
             
             if is_checked:
-                F_val = info["J"] + I_val
                 mF_options = np.arange(-F_val, F_val + 1, 1.0)
-                selected_mF = st.selectbox(f"Select mF", mF_options, key=f"mf_{state_name}")
+                selected_mF = st.selectbox(
+                    f"Select mF", 
+                    mF_options, 
+                    key=f"mf_{state_name}",
+                    format_func=to_fraction  # Display mF as fractions
+                )
                 
                 selected_configs.append({
                     "name": state_name,
@@ -109,8 +127,6 @@ with tab1:
             pol_val_array = polarizability(wavelengths, config["istate"], config["mF"], p_val, I_val, beta_angle)
             
             # --- APPLY 1S0 CORE CORRECTION ---
-            # polarizability() returns negative values for red-detuned traps.
-            # Shifting V_ac/I by -0.8 means subtracting (0.8 / conv_factor) from the array.
             if config["istate"] == 1:
                 pol_val_array = pol_val_array - (0.8 / conv_factor)
             
@@ -133,7 +149,7 @@ with tab1:
                 y_plot[idx] = np.nan
                 y_plot[idx+1] = np.nan
                 
-            label_str = f"{config['name']}, F={config['J']+I_val}, mF={config['mF']}"
+            label_str = f"{config['name']}, F={to_fraction(config['J']+I_val)}, mF={to_fraction(config['mF'])}"
             
             fig.add_trace(go.Scatter(
                 x=wavelengths, 
@@ -162,7 +178,6 @@ with tab1:
 with tab2:
     st.title("Optical Trap Depth & Scattering Rate Calculator (1S0 Ground State)")
     
-    # Transition wavenumbers and corresponding natural linewidths (Units: cm^-1, kHz)
     transitions_data = {
         "(6s6p)3P1 (≈ 556 nm)": {"wn": 17992.00699, "gamma_khz": 182.2},
         "(6s6p)1P1 (≈ 399 nm)": {"wn": 25068.222, "gamma_khz": 29000.0}
@@ -246,7 +261,7 @@ with tab2:
             recoil_nK = (recoil_J / kB) * 1e9
             
             # --- Display Results ---
-            st.subheader("📊 Calculation Results")
+            st.subheader("📊 Calculation Results (with -0.8 V_ac/I Core Correction)")
             res_col1, res_col2, res_col3, res_col4 = st.columns(4)
             
             res_col1.metric("Trap Depth", f"{trap_depth_uK:.2f} uK")
