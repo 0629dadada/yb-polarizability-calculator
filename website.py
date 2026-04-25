@@ -147,7 +147,7 @@ with tab1:
             y_plot = np.array(y_plot, dtype=float)
             
             diffs = np.abs(np.diff(y_plot))
-            jump_threshold = y_limit * 2  
+            jump_threshold = y_limit * 0.5
             jump_indices = np.where(diffs > jump_threshold)[0]
             
             for idx in jump_indices:
