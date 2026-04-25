@@ -8,11 +8,16 @@ st.set_page_config(page_title="Yb Physics Calculator", layout="wide")
 
 # --- Helper Function: Convert Float to Fraction String ---
 def to_fraction(val):
-    """Converts 0.5 -> 1/2, 1.5 -> 3/2, etc. Keeps integers as strings."""
-    if val == 0: return "0"
-    if abs(val % 1) == 0.5:
-        return f"{int(2*val)}/2"
-    return str(int(val))
+    """Converts 0.5 -> 1/2, 1.5 -> 3/2. Keeps integers as plain strings (no decimals)."""
+    # 處理浮點數極微小誤差 (例如 0.00000)
+    if abs(val) < 1e-9:
+        return "0"
+    # 偵測半整數 (例如 0.5, 1.5, -0.5)
+    if abs(abs(val) % 1 - 0.5) < 1e-9:
+        sign = "-" if val < 0 else ""
+        return f"{sign}{int(abs(val) * 2)}/2"
+    # 其他必定為整數，直接四捨五入後轉字串，完全剃除小數點
+    return str(int(round(val)))
 
 # --- Global Physical Constants ---
 c_const = 299792458
@@ -77,7 +82,7 @@ tab1, tab2 = st.tabs(["📊 Polarizability Plotter", "🧮 Trap & Scattering Cal
 # ==========================================
 with tab1:
     st.title("Ytterbium (Yb) Interactive Polarizability Plotter")
-    st.markdown("Select states and $m_F$ values. The plot supports **hover values, scroll-to-zoom, and drag-to-pan**.")
+    st.markdown("Select states and mF values. The plot supports **hover values, scroll-to-zoom, and drag-to-pan**.")
     st.info("💡 **Physics Note:** A core polarizability correction of **-0.8 V_ac/I** is automatically applied to the 1S0 state.")
 
     states_info = {
@@ -105,7 +110,7 @@ with tab1:
                     f"Select mF", 
                     mF_options, 
                     key=f"mf_{state_name}",
-                    format_func=to_fraction  # Display mF as fractions
+                    format_func=to_fraction  # Display mF as fractions without decimals
                 )
                 
                 selected_configs.append({
