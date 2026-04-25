@@ -9,14 +9,11 @@ st.set_page_config(page_title="Yb Physics Calculator", layout="wide")
 # --- Helper Function: Convert Float to Fraction String ---
 def to_fraction(val):
     """Converts 0.5 -> 1/2, 1.5 -> 3/2. Keeps integers as plain strings (no decimals)."""
-    # 處理浮點數極微小誤差 (例如 0.00000)
     if abs(val) < 1e-9:
         return "0"
-    # 偵測半整數 (例如 0.5, 1.5, -0.5)
     if abs(abs(val) % 1 - 0.5) < 1e-9:
         sign = "-" if val < 0 else ""
         return f"{sign}{int(abs(val) * 2)}/2"
-    # 其他必定為整數，直接四捨五入後轉字串，完全剃除小數點
     return str(int(round(val)))
 
 # --- Global Physical Constants ---
@@ -146,13 +143,7 @@ with tab1:
 
             y_plot = np.array(y_plot, dtype=float)
             
-            diffs = np.abs(np.diff(y_plot))
-            jump_threshold = y_limit * 0.5
-            jump_indices = np.where(diffs > jump_threshold)[0]
-            
-            for idx in jump_indices:
-                y_plot[idx] = np.nan
-                y_plot[idx+1] = np.nan
+            # --- 移除了斷線演算法，保留垂直漸近線 ---
                 
             label_str = f"{config['name']}, F={to_fraction(config['J']+I_val)}, mF={to_fraction(config['mF'])}"
             
