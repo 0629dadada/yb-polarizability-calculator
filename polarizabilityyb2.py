@@ -1,6 +1,7 @@
 import numpy as np
 from sympy.physics.wigner import wigner_6j
 import math
+import streamlit as st  # 新增：載入 streamlit 來處理快取
 
 # 載入我們寫好的 JSON 資料庫引擎
 from atomic_data_base import YbAtomicDatabase
@@ -17,37 +18,38 @@ au = (4 * np.pi * epsilon0 * a0**3)
 e = 1.602176634e-19           
 ea0 = e * a0                  
 
-# 初始化資料庫 (確保 atomdata.json 在同一目錄下)
-db = YbAtomicDatabase('atomdata.json')
+# ==========================================
+# ★ 新增：使用 Streamlit 快取機制來載入資料庫
+# ==========================================
+# 這樣寫的好處是：不用每次畫圖都重新讀檔，但當你按下「清除快取」按鈕時，它又能重新讀取最新的 JSON
+@st.cache_resource
+def get_atomic_db():
+    return YbAtomicDatabase('atomdata.json')
 
 # ==========================================
 # 2. 核心極化率函數
 # ==========================================
 def polarizability(lambda_nm, state, mi=0, p=0, I=0, beta=0):
     """
-    極化率計算機:
-    :param lambda_nm: 波長陣列或單一波長 (nm)
-    :param state: 能階字串 (如 "1S0", "3P1") 或舊版整數代號 (1~7)
-    :param mi: 磁量子數 mF
-    :param p: 偏振 (0: linear, 1: sigma+, -1: sigma-)
-    :param I: 核自旋 (174Yb 為 0, 171Yb 為 0.5, 173Yb 為 2.5)
-    :param beta: 光傳播方向或極化向量與量子化軸的夾角 (degree)
+    極化率計算機
     """
     
     # ---------------------------------------------------------
     # A. 參數前處理與資料庫查詢
     # ---------------------------------------------------------
-    # 防呆/兼容機制：如果舊版網頁傳入數字，自動轉換為 JSON 能階名稱
     if isinstance(state, int):
         legacy_map = {1: "1S0", 2: "3P0", 3: "3P1", 4: "3P2", 5: "3D1", 6: "3D2", 7: "3S1_6s7s"}
         state_name = legacy_map.get(state, "1S0")
     else:
         state_name = state
 
+    # ★ 修改：每次計算時，呼叫快取函數來獲取資料庫實例
+    db = get_atomic_db()
+    
     # 呼叫資料庫，直接拿取該能階對應的所有耦合參數
     couplings = db.get_couplings(state_name)
     
-    # 將變數攤平，徹底拔除舊版 [istate] 的維度包袱
+    # 將變數攤平
     Ji = couplings['J_i']
     w = couplings['w']
     Jk = couplings['J_k']
@@ -55,7 +57,7 @@ def polarizability(lambda_nm, state, mi=0, p=0, I=0, beta=0):
     Fi = Ji + I
 
     # ---------------------------------------------------------
-    # B. 極化率公式計算 (完全保留原有張量推導，僅將陣列降維)
+    # B. 極化率公式計算 
     # ---------------------------------------------------------
     wlight = 2 * np.pi * c / (np.array(lambda_nm) * 1e-9)
     alpha_s = np.zeros_like(wlight, dtype=float)

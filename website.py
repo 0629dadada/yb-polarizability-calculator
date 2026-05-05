@@ -36,6 +36,15 @@ conv_factor = (2 * np.pi * a0_const**3 / (c_const * h_const)) * 10000
 # --- Sidebar: Global Settings ---
 st.sidebar.title("Global Parameters")
 
+# ===== 把下面這段加進去 =====
+st.sidebar.markdown("### 🔄 系統更新")
+if st.sidebar.button("重新讀取 JSON 資料", use_container_width=True):
+    st.cache_resource.clear()  # 清除我們剛才加在極化率函數裡的快取
+    st.rerun()                 # 強制網頁立刻重新整理
+# =========================
+
+st.sidebar.markdown("### 1. Shared Physics Parameters")
+# ... 下面是你原本的 isotope, polarization 等等設定 ...
 st.sidebar.markdown("### 1. Shared Physics Parameters")
 # Display I as fractions in the selector
 isotope = st.sidebar.selectbox(
@@ -133,7 +142,7 @@ with tab1:
             pol_val_array = polarizability(wavelengths, config["istate"], config["mF"], p_val, I_val, beta_angle)
             
             # --- APPLY 1S0 CORE CORRECTION ---
-            if config["istate"] == "1S0" or config["istate"] == 1:
+            if config["istate"] == 1:
                 pol_val_array = pol_val_array - (0.8 / conv_factor)
             
             if unit_choice == "Atomic Unit (a.u.)":
