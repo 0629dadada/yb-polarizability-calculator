@@ -140,7 +140,7 @@ with tab1:
             pol_val_array = polarizability(wavelengths, config["istate"], config["mF"], p_val, I_val, beta_angle)
             
             # --- APPLY 1S0 CORE CORRECTION ---
-            if config["istate"] == 1:
+            if config["name"] == "1S0":
                 pol_val_array = pol_val_array - (0.8 / conv_factor)
             
             if unit_choice == "Atomic Unit (a.u.)":
@@ -244,7 +244,7 @@ with tab2:
                 st.info("ℹ️ Dipole Trap: Calculation uses focal center intensity (I = I_0)")
 
             # 2. Calculate Trap Depth (Applying -0.8 V_ac/I correction to 1S0)
-            raw_pol_array = polarizability(eval_wvl_nm, 1, 0, p_val, I_val, beta_angle)
+            raw_pol_array = polarizability(eval_wvl_nm, "1S0", 0, p_val, I_val, beta_angle)
             corrected_pol_array = raw_pol_array - (0.8 / conv_factor)
             
             alpha_au_val = abs(corrected_pol_array)
