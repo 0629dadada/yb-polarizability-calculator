@@ -140,7 +140,7 @@ with tab1:
             pol_val_array = polarizability(wavelengths, config["istate"], config["mF"], p_val, I_val, beta_angle)
             
             # --- APPLY 1S0 CORE CORRECTION ---
-            if config["name"] == "1S0":
+            if config["istate"] == "1S0":
                 pol_val_array = pol_val_array - (0.8 / conv_factor)
             
             if unit_choice == "Atomic Unit (a.u.)":
