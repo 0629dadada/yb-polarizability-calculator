@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 #from polarizabilityyb1 import polarizability
-from polarizabilityyb2 import polarizability
+from polarizabilityyb2 import polarizability, get_atomic_db
 from scattering_rate import scatterrate
 
 st.set_page_config(page_title="Yb Physics Calculator", layout="wide")
@@ -83,7 +83,8 @@ unit_choice = st.sidebar.radio("Y-axis Unit",
                                ["Atomic Unit (a.u.)", "Stark Shift (h Hz W^-1 cm^2)"])
 
 # --- Main Page Tabs ---
-tab1, tab2 = st.tabs(["📊 Polarizability Plotter", "🧮 Trap & Scattering Calculator"])
+# --- Main Page Tabs ---
+tab1, tab2, tab3 = st.tabs(["📊 Polarizability Plotter", "🧮 Trap & Scattering Calculator", "📚 Database & References"])
 
 # ==========================================
 # Tab 1: Polarizability Plotter
@@ -285,3 +286,64 @@ with tab2:
             
         except Exception as e:
             st.error(f"Calculation Error: {e}\nPlease check if the input parameters are valid.")
+
+# ==========================================
+# Tab 3: Database & References
+# ==========================================
+with tab3:
+    st.title("📚 Database & References")
+    st.markdown("Explore the underlying atomic transitions used for the polarizability calculations.")
+
+    # --- 1. Interactive Database Viewer ---
+    st.subheader("1. Interactive Transition Database")
+    
+    # Load the database
+    db = get_atomic_db()
+    
+    # Create a dropdown to select a state
+    state_names = list(db.states.keys())
+    selected_state = st.selectbox("Select a State to view its coupled transitions:", state_names)
+
+    # Filter transitions for the selected state
+    display_data = []
+    for t in db.transitions:
+        if t['upper'] == selected_state or t['lower'] == selected_state:
+            # Determine which one is the "coupled" state
+            coupled_state = t['lower'] if t['upper'] == selected_state else t['upper']
+            
+            # The A_rate in the JSON is essentially the spontaneous emission rate (Gamma).
+            # Convert it to Gamma / (2*pi) in Hz or MHz if needed. Here we keep it raw and in Hz for precision.
+            gamma_2pi_hz = t['A_rate'] / (2 * np.pi)
+            
+            display_data.append({
+                "Coupled State": coupled_state,
+                "Wavelength (nm)": f"{t['wavelength_nm']:.4f}",
+                "Gamma / 2π (Hz)": f"{gamma_2pi_hz:.3e}",
+                "A_rate (s⁻¹)": f"{t['A_rate']:.3e}"
+            })
+
+    # Display the table
+    if display_data:
+        st.dataframe(display_data, use_container_width=True)
+    else:
+        st.info(f"No transitions found for {selected_state} in the current database.")
+
+    st.divider()
+
+    # --- 2. References & Physics Notes ---
+    st.subheader("2. References & Physics Notes")
+    
+    st.info("""
+    *Database.* Transitions and partial linewidths are transcribed from Will Cairncross's `level_diagram_v5`. Each row in the database represents a verified transition coupling.
+    """)
+
+    st.markdown("""
+    #### **Literature References**
+    * **RME Calculations:** The theoretical methodology and specific Reduced Matrix Elements (RMEs) refer to:  
+      *[Determination of static dipole polarizabilities of Yb atom - IOPscience]*
+    
+    #### **Core Corrections & Effective Transitions**
+    To accurately model the polarizability, the following manual corrections have been applied:
+    * **1S0 Core Correction:** A core polarizability correction of **-0.8 V_ac/I** (or corresponding atomic units) has been applied to the ground state ($1S_0$).
+    * **3P0 Effective Transition:** An effective core transition at **375 nm** with a linewidth of **$\Gamma/(2\pi) = 10.3$ MHz** has been added to the $3P_0$ state to account for unlisted high-energy core couplings.
+    """)
