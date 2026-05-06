@@ -44,8 +44,6 @@ if st.sidebar.button("重新讀取 JSON 資料", use_container_width=True):
 # =========================
 
 st.sidebar.markdown("### 1. Shared Physics Parameters")
-# ... 下面是你原本的 isotope, polarization 等等設定 ...
-st.sidebar.markdown("### 1. Shared Physics Parameters")
 # Display I as fractions in the selector
 isotope = st.sidebar.selectbox(
     "Isotope", 
