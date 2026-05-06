@@ -29,24 +29,18 @@ def get_atomic_db():
 # ==========================================
 # 2. 核心極化率函數
 # ==========================================
-def polarizability(lambda_nm, state, mi=0, p=0, I=0, beta=0):
+def polarizability(lambda_nm, state_name, mi=0, p=0, I=0, beta=0):
     """
     極化率計算機
     """
-    
+
     # ---------------------------------------------------------
     # A. 參數前處理與資料庫查詢
     # ---------------------------------------------------------
-    if isinstance(state, int):
-        legacy_map = {1: "1S0", 2: "3P0", 3: "3P1", 4: "3P2", 5: "3D1", 6: "3D2", 7: "3S1_6s7s"}
-        state_name = legacy_map.get(state, "1S0")
-    else:
-        state_name = state
-
-    # ★ 修改：每次計算時，呼叫快取函數來獲取資料庫實例
+    # 直接呼叫快取函數來獲取資料庫實例
     db = get_atomic_db()
     
-    # 呼叫資料庫，直接拿取該能階對應的所有耦合參數
+    # 直接拿傳入的字串去資料庫查詢
     couplings = db.get_couplings(state_name)
     
     # 將變數攤平
@@ -119,3 +113,4 @@ def polarizability(lambda_nm, state, mi=0, p=0, I=0, beta=0):
             return -alpha/au
         else:
             raise ValueError("Invalid polarization")
+        

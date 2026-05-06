@@ -94,13 +94,13 @@ with tab1:
     st.info("💡 **Physics Note:** A core polarizability correction of **-0.8 V_ac/I** is automatically applied to the 1S0 state.")
 
     states_info = {
-        "1S0": {"istate": 1, "J": 0},
-        "3P0": {"istate": 2, "J": 0},
-        "3P1": {"istate": 3, "J": 1},
-        "3P2": {"istate": 4, "J": 2},
-        "(5d6s)3D1": {"istate": 5, "J": 1},
-        "(5d6s)3D2": {"istate": 6, "J": 2},
-        "(6s7s)3S1": {"istate": 7, "J": 1}
+        "1S0": {"db_name": "1S0", "J": 0},
+        "3P0": {"db_name": "3P0", "J": 0},
+        "3P1": {"db_name": "3P1", "J": 1},
+        "3P2": {"db_name": "3P2", "J": 2},
+        "(5d6s)3D1": {"db_name": "3D1", "J": 1},
+        "(5d6s)3D2": {"db_name": "3D2", "J": 2},
+        "(6s7s)3S1": {"db_name": "3S1_6s7s", "J": 1}
     }
 
     selected_configs = []
@@ -118,12 +118,12 @@ with tab1:
                     f"Select mF", 
                     mF_options, 
                     key=f"mf_{state_name}",
-                    format_func=to_fraction  # Display mF as fractions without decimals
+                    format_func=to_fraction
                 )
                 
                 selected_configs.append({
-                    "name": state_name,
-                    "istate": info["istate"],
+                    "ui_name": state_name,         
+                    "db_name": info["db_name"],    
                     "J": info["J"],
                     "mF": selected_mF 
                 })
@@ -137,10 +137,11 @@ with tab1:
         fig = go.Figure()
         
         for config in selected_configs:
-            pol_val_array = polarizability(wavelengths, config["istate"], config["mF"], p_val, I_val, beta_angle)
+            # 1. 這裡改成傳入 config["db_name"] (例如純粹的 "1S0" 或 "3D1")
+            pol_val_array = polarizability(wavelengths, config["db_name"], config["mF"], p_val, I_val, beta_angle)
             
-            # --- APPLY 1S0 CORE CORRECTION ---
-            if config["name"] == "1S0":
+            # 2. 這裡也改成用 db_name 來判斷，這樣字串對字串才會等於 True！
+            if config["db_name"] == "1S0":
                 pol_val_array = pol_val_array - (0.8 / conv_factor)
             
             if unit_choice == "Atomic Unit (a.u.)":
@@ -162,7 +163,8 @@ with tab1:
                 y_plot[idx] = np.nan
                 y_plot[idx+1] = np.nan
                 
-            label_str = f"{config['name']}, F={to_fraction(config['J']+I_val)}, mF={to_fraction(config['mF'])}"
+            # 3. 標籤顯示用漂亮的 ui_name (例如 "(5d6s)3D1")
+            label_str = f"{config['ui_name']}, F={to_fraction(config['J']+I_val)}, mF={to_fraction(config['mF'])}"
             
             fig.add_trace(go.Scatter(
                 x=wavelengths, 
@@ -183,7 +185,6 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Please select at least one state above to display the plot.")
-
 
 # ==========================================
 # Tab 2: Trap & Scattering Calculator 
